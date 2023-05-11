@@ -41,7 +41,7 @@ class Local(FetchMethod):
         """
         Return the local filename of a given url assuming a successful fetch.
         """
-        return self.localfile_searchpaths(urldata, d)[-1]
+        return self.localfile_searchpaths(urldata, d)[1]
 
     def localfile_searchpaths(self, urldata, d):
         """
@@ -49,32 +49,38 @@ class Local(FetchMethod):
         """
         searched = []
         path = urldata.decodedurl
-        newpath = path
+        newpath = None
         if path[0] == "/":
             logger.debug2("Using absolute %s" % (path))
-            return [path]
+            if os.path.exists(path):
+                return [path], path
+            else:
+                return [path], None
         filespath = d.getVar('FILESPATH')
         if filespath:
             logger.debug2("Searching for %s in paths:\n    %s" % (path, "\n    ".join(filespath.split(":"))))
             newpath, hist = bb.utils.which(filespath, path, history=True)
             logger.debug2("Using %s for %s" % (newpath, path))
             searched.extend(hist)
-        return searched
+        # ensure newpath "" becomes None
+        if newpath:
+            return searched, newpath
+        return searched, None
 
     def need_update(self, ud, d):
-        if os.path.exists(ud.localpath):
+        if ud.localpath and os.path.exists(ud.localpath):
             return False
         return True
 
     def download(self, urldata, d):
         """Fetch urls (no-op for Local method)"""
         # no need to fetch local files, we'll deal with them in place.
-        if self.supports_checksum(urldata) and not os.path.exists(urldata.localpath):
+        if not urldata.localpath or (self.supports_checksum(urldata) and not os.path.exists(urldata.localpath)):
             locations = []
             filespath = d.getVar('FILESPATH')
             if filespath:
                 locations = filespath.split(":")
-            msg = "Unable to find file " + urldata.url + " anywhere to download to " + urldata.localpath + ". The paths that were searched were:\n    " + "\n    ".join(locations)
+            msg = "Unable to find file " + urldata.url + " anywhere to download to " + (urldata.localpath or "<unknown>") + ". The paths that were searched were:\n    " + "\n    ".join(locations)
             raise FetchError(msg)
 
         return True
@@ -83,7 +89,7 @@ class Local(FetchMethod):
         """
         Check the status of the url
         """
-        if os.path.exists(urldata.localpath):
+        if urldata.localpath and os.path.exists(urldata.localpath):
             return True
         return False
 
