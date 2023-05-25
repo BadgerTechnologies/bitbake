@@ -1102,7 +1102,7 @@ def try_mirror_url(fetch, origud, ud, ld, check = False):
 
 
 def ensure_symlink(target, link_name):
-    if link_name and not os.path.exists(link_name):
+    if not os.path.exists(link_name):
         dirname = os.path.dirname(link_name)
         bb.utils.mkdirhier(dirname)
         if os.path.islink(link_name):
@@ -1234,7 +1234,7 @@ def get_checksum_file_list(d):
         ud = fetch.ud[u]
         if ud and isinstance(ud.method, local.Local):
             found = False
-            paths, _ = ud.method.localfile_searchpaths(ud, d)
+            paths = ud.method.localfile_searchpaths(ud, d)
             for f in paths:
                 pth = ud.decodedurl
                 if os.path.exists(f):
@@ -1403,7 +1403,7 @@ class FetchMethod(object):
         """
 
         # We cannot compute checksums for directories
-        if urldata.localpath and os.path.isdir(urldata.localpath):
+        if os.path.isdir(urldata.localpath):
             return False
         return True
 
@@ -1650,7 +1650,7 @@ class FetchMethod(object):
         """
         Is the download done ?
         """
-        if ud.localpath and os.path.exists(ud.localpath):
+        if os.path.exists(ud.localpath):
             return True
         return False
 
